@@ -14,19 +14,20 @@
 #include <unordered_map>
 #include <atomic>
 #include <pthread.h>
+#include <memory>
 
 typedef std::unordered_map<std::string, std::string> StringMap;
-
 
 class NonBlockingReadMap {
 private:
     pthread_mutex_t fMutex;    
-    std::atomic<std::shared_ptr<StringMap>> fspReadMapReference;
+    std::shared_ptr<StringMap> fspReadMapReference;
+
     
 public:
     
     NonBlockingReadMap() {
-        fReadMapReference.store(new StringMap());
+        fspReadMapReference = std::make_shared<StringMap>();
     }
     
     ~NonBlockingReadMap() {
@@ -34,25 +35,23 @@ public:
     }
     
     std::string get(std::string &key) {
-        return fReadMapReference.load()->at(key);
+        return fspReadMapReference->at(key);
     }
     
     void put(std::string &key, std::string &value) {
         pthread_mutex_lock(&fMutex);
-        std::shared_ptr<StringMap> psCurrentReadMap =  fspReadMapReference.load();
-        std::shared_ptr<StringMap> spMapCopy(new StringMap(*psCurrentReadMap));
+        std::shared_ptr<StringMap> spMapCopy = std::make_shared<StringMap>(*fspReadMapReference);
         std::pair<std::string, std::string> kvPair(key, value);
         spMapCopy->insert(kvPair);
-        fReadMapReference.store(spMapCopy.get());
+        fspReadMapReference.swap(spMapCopy);
         pthread_mutex_unlock(&fMutex);
     }
     
     void clear() {
         pthread_mutex_lock(&fMutex);
-        std::shared_ptr<StringMap> psCurrentReadMap =  fspReadMapReference.load();
-        std::shared_ptr<StringMap> spMapCopy(new StringMap(*psCurrentReadMap));
-        fReadMapReference.store(spMapCopy.get());
-        psCurrentReadMap->clear();
+        std::shared_ptr<StringMap> spMapCopy = std::make_shared<StringMap>(*fspReadMapReference);
+        fspReadMapReference.swap(spMapCopy);
+        spMapCopy->clear();
         pthread_mutex_unlock(&fMutex);
     }
     
