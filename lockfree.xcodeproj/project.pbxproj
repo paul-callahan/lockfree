@@ -6,8 +6,13 @@
 	objectVersion = 46;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		DAE3D4C9196CF6E900C3B816 /* NonBlockingReadMap.hpp in Headers */ = {isa = PBXBuildFile; fileRef = DAE3D4C8196CF6E900C3B816 /* NonBlockingReadMap.hpp */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		DAE3D4C1196CF5F500C3B816 /* liblockfree.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = liblockfree.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		DAE3D4C8196CF6E900C3B816 /* NonBlockingReadMap.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = NonBlockingReadMap.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -24,6 +29,7 @@
 		DAE3D4B8196CF5F500C3B816 = {
 			isa = PBXGroup;
 			children = (
+				DAE3D4C8196CF6E900C3B816 /* NonBlockingReadMap.hpp */,
 				DAE3D4C2196CF5F500C3B816 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -43,6 +49,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DAE3D4C9196CF6E900C3B816 /* NonBlockingReadMap.hpp in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -208,6 +215,7 @@
 				DAE3D4C7196CF5F500C3B816 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
