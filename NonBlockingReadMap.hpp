@@ -20,9 +20,7 @@ typedef std::unordered_map<std::string, std::string> StringMap;
 
 class NonBlockingReadMap {
 private:
-    pthread_mutex_t fMutex;
-    std::atomic<StringMap*> fReadMapReference;
-    
+    pthread_mutex_t fMutex;    
     std::atomic<std::shared_ptr<StringMap>> fspReadMapReference;
     
 public:
