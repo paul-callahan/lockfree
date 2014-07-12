@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		DAEAA861196DD869002A2724 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DAEAA860196DD869002A2724 /* main.cpp */; };
 		DAEAA863196DD869002A2724 /* lockfree.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = DAEAA862196DD869002A2724 /* lockfree.1 */; };
+		DAEAA8761970D322002A2724 /* Hazard.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DAEAA8741970D322002A2724 /* Hazard.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -32,6 +33,8 @@
 		DAEAA86B196DDAF5002A2724 /* NonBlockingReadMapRefCount.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = NonBlockingReadMapRefCount.hpp; sourceTree = "<group>"; };
 		DAEAA872196F93A8002A2724 /* NonBlockingReadMapCAS.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = NonBlockingReadMapCAS.hpp; sourceTree = "<group>"; };
 		DAEAA873196F998A002A2724 /* NonBlockingReadMapAtomic.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = NonBlockingReadMapAtomic.hpp; sourceTree = "<group>"; };
+		DAEAA8741970D322002A2724 /* Hazard.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Hazard.cpp; sourceTree = "<group>"; };
+		DAEAA8751970D322002A2724 /* Hazard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Hazard.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,6 +73,8 @@
 				DAEAA873196F998A002A2724 /* NonBlockingReadMapAtomic.hpp */,
 				DAEAA860196DD869002A2724 /* main.cpp */,
 				DAEAA862196DD869002A2724 /* lockfree.1 */,
+				DAEAA8741970D322002A2724 /* Hazard.cpp */,
+				DAEAA8751970D322002A2724 /* Hazard.h */,
 			);
 			path = lockfree;
 			sourceTree = "<group>";
@@ -126,6 +131,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				DAEAA861196DD869002A2724 /* main.cpp in Sources */,
+				DAEAA8761970D322002A2724 /* Hazard.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

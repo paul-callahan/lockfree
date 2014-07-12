@@ -22,7 +22,7 @@ class NonBlockingReadMapAtomic {
 private:
     pthread_mutex_t fMutex;
     std::atomic<StringMap*> fReadMapReference;
-    boost::queue<>
+    //boost::queue<>
     
     
 public:
