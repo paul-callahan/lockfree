@@ -14,8 +14,8 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "DAE3D4C0196CF5F500C3B816"
-               BuildableName = "liblockfree.a"
+               BlueprintIdentifier = "DAEAA85C196DD869002A2724"
+               BuildableName = "lockfree"
                BlueprintName = "lockfree"
                ReferencedContainer = "container:lockfree.xcodeproj">
             </BuildableReference>
@@ -29,6 +29,15 @@
       buildConfiguration = "Debug">
       <Testables>
       </Testables>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "DAEAA85C196DD869002A2724"
+            BuildableName = "lockfree"
+            BlueprintName = "lockfree"
+            ReferencedContainer = "container:lockfree.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
    </TestAction>
    <LaunchAction
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
@@ -39,6 +48,15 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       allowLocationSimulation = "YES">
+      <BuildableProductRunnable>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "DAEAA85C196DD869002A2724"
+            BuildableName = "lockfree"
+            BlueprintName = "lockfree"
+            ReferencedContainer = "container:lockfree.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
       <AdditionalOptions>
       </AdditionalOptions>
    </LaunchAction>
@@ -48,6 +66,15 @@
       useCustomWorkingDirectory = "NO"
       buildConfiguration = "Release"
       debugDocumentVersioning = "YES">
+      <BuildableProductRunnable>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "DAEAA85C196DD869002A2724"
+            BuildableName = "lockfree"
+            BlueprintName = "lockfree"
+            ReferencedContainer = "container:lockfree.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

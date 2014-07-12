@@ -1,37 +1,47 @@
 //
-//  NonBlockingReadMapV1.hpp
+//  NonBlockingReadMapAtomic.hpp
 //  lockfree
 //
 //  Created by Paul Callahan on 7/9/14.
 //  Copyright (c) 2014 Paul Callahan. All rights reserved.
 //
 
-#ifndef lockfree_NonBlockingReadMapV1_hpp
-#define lockfree_NonBlockingReadMapV1_hpp
+#pragma once
+
 
 
 #include <unordered_map>
 #include <atomic>
 #include <pthread.h>
+#include <boost/lockfree/queue.hpp>
 
 typedef std::unordered_map<std::string, std::string> StringMap;
 
-class NonBlockingReadMapV1 {
+class NonBlockingReadMapAtomic {
     
 private:
     pthread_mutex_t fMutex;
     std::atomic<StringMap*> fReadMapReference;
+    boost::queue<>
+    
     
 public:
     
-    NonBlockingReadMapV1() {
+    
+
+    
+    NonBlockingReadMapAtomic() {
         fReadMapReference.store(new StringMap());
     }
     
-    ~NonBlockingReadMapV1() {
+    ~NonBlockingReadMapAtomic() {
         delete fReadMapReference.load();
     }
     
+
+    
+
+
     std::string get(std::string &key) {
         return fReadMapReference.load()->at(key);
     }
@@ -43,7 +53,7 @@ public:
         std::pair<std::string, std::string> kvPair(key, value);
         upMapCopy->insert(kvPair);
         fReadMapReference.store(upMapCopy.release());
-        delete pCurrentReadMap;
+        delete pCurrentReadMap;   //  <-- Boom!  get() might still be using it.
         pthread_mutex_unlock(&fMutex);
     }
     
@@ -53,13 +63,10 @@ public:
         std::unique_ptr<StringMap> upMapCopy(new StringMap());
         fReadMapReference.store(upMapCopy.release());
         pCurrentReadMap->clear();
-        delete pCurrentReadMap;
+        delete pCurrentReadMap;  //  <-- Boom!  get() might still be using it.
         pthread_mutex_unlock(&fMutex);
     }
     
 };
 
 
-
-
-#endif
