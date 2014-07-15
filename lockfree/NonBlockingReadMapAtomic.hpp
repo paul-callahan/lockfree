@@ -13,7 +13,7 @@
 #include <unordered_map>
 #include <atomic>
 #include <pthread.h>
-#include <boost/lockfree/queue.hpp>
+//#include <boost/lockfree/queue.hpp>
 
 typedef std::unordered_map<std::string, std::string> StringMap;
 

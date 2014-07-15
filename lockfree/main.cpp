@@ -6,28 +6,64 @@
 //  Copyright (c) 2014 Paul Callahan. All rights reserved.
 //
 
+#include <string>
 #include <iostream>
-#include <unordered_map>
-#include <atomic>
-#include <memory>
+#include <boost/unordered_map.hpp>
+//#include <atomic>
+//#include <memory>
+#include <vector>
 
-#include "NonBlockingReadMapAtomic.hpp"
 
-#include "NonBlockingReadMapSharedPtr.hpp"
+//#include "NonBlockingReadMapAtomic.hpp"
+
+//#include "NonBlockingReadMapSharedPtr.hpp"
+//#include "Hazard.h"
+
+
 //#include "NonBlockingReadMapCAS.hpp"
-//#include "NonBlockingReadMapRefCount.hpp"
+#include "NonBlockingReadMapRefCount.hpp"
+
+//#include "NonBlockingReadMapCAS.hpp"
+
+//#include <boost/thread/tss.hpp>
 
 
+//typedef boost::unordered_map<std::string, std::string> StringMap;
+
+//static boost::thread_specific_ptr<std::vector<StringMap*>> rlist;
 
 
-typedef std::unordered_map<std::string, std::string> StringMap;
+struct MyObj {
+    char * c;
+    int i;
+};
+
+void assignAndIncrement(MyObj *dest, MyObj *src ) {
+    //begin atomic
+    dest = src;
+    src->i++;
+    //end atomic
+}
+
 int main()
 {
+    MyObj * src = new MyObj;
+    src->c = "asdf";
+    src->i = 0;
+    
+    MyObj *dest;
+    
+    assignAndIncrement(dest, src);
+    
+    std::cout << dest->c << " " << dest->i ;
+    
+    
+    //std::string key("lala");
+    //std::string value("xyz");
 /*
     NonBlockingReadMapSharedPtr nbrmap;
     
-    std::string key("lala");
-    std::string value("xyz");
+
     
     nbrmap.put(key, value);
     nbrmap.put("lala2", "xyz2");

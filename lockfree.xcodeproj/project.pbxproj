@@ -26,6 +26,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		DA7395DC197311DD0083D4C3 /* Header.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Header.hpp; sourceTree = "<group>"; };
+		DA7395DD19731E8E0083D4C3 /* ReaderReferenceCountMap.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ReaderReferenceCountMap.hpp; sourceTree = "<group>"; };
+		DA7395DE197350B20083D4C3 /* DifferentialReferenceCounter.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = DifferentialReferenceCounter.hpp; sourceTree = "<group>"; };
 		DAEAA85D196DD869002A2724 /* lockfree */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = lockfree; sourceTree = BUILT_PRODUCTS_DIR; };
 		DAEAA860196DD869002A2724 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		DAEAA862196DD869002A2724 /* lockfree.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = lockfree.1; sourceTree = "<group>"; };
@@ -69,12 +72,15 @@
 			children = (
 				DAEAA86A196DDAF5002A2724 /* NonBlockingReadMapSharedPtr.hpp */,
 				DAEAA86B196DDAF5002A2724 /* NonBlockingReadMapRefCount.hpp */,
+				DA7395DD19731E8E0083D4C3 /* ReaderReferenceCountMap.hpp */,
 				DAEAA872196F93A8002A2724 /* NonBlockingReadMapCAS.hpp */,
 				DAEAA873196F998A002A2724 /* NonBlockingReadMapAtomic.hpp */,
 				DAEAA860196DD869002A2724 /* main.cpp */,
 				DAEAA862196DD869002A2724 /* lockfree.1 */,
 				DAEAA8741970D322002A2724 /* Hazard.cpp */,
 				DAEAA8751970D322002A2724 /* Hazard.h */,
+				DA7395DC197311DD0083D4C3 /* Header.hpp */,
+				DA7395DE197350B20083D4C3 /* DifferentialReferenceCounter.hpp */,
 			);
 			path = lockfree;
 			sourceTree = "<group>";
@@ -267,6 +273,7 @@
 				DAEAA868196DD869002A2724 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

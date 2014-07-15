@@ -25,6 +25,62 @@ typedef std::unordered_map<std::string, std::string> StringMap;
  */
 
 
+struct MyThing {
+    std::atomic<void *> pSomeObj;
+    std::atomic<uint64_t> counter;
+    __attribute__((aligned(16)));
+};
+
+bool AtomicCopyAndIncrement(MyThing **dest, MyThing *src) {
+    //begin atomic
+    dest = &src;
+    src->counter++;
+    //end atomic
+    return true;
+}
+
+void blarg() {
+    
+    MyThing* src;
+    MyThing* dest;
+    
+    AtomicCopyAndIncrement(&dest, src);
+    
+    std::atomic<MyThing*> asrc;
+    std::atomic<MyThing*> adest;
+    
+    
+}
+
+bool AtmoicCopyAndIncrement(MyThing *dest, MyThing *src)
+{
+    bool swap_result;
+    __asm__ __volatile__
+    (
+     "lock cmpxchg16b %0;"  // cmpxchg16b sets ZF on success
+     "setz       %3;"  // if ZF set, set cas_result to 1
+     
+     : "+m" (*dest), "+a" (dest->pSomeObj), "+d" (dest->counter), "=q" (swap_result)
+     : "b" (src->pSomeObj), "c" (src->counter +1)
+     : "cc", "memory"
+     );
+    return swap_result;
+}
+
+bool AtmoicDecrement(MyThing *dest)
+{
+    bool swap_result;
+    __asm__ __volatile__
+    (
+     "lock cmpxchg16b %0;"  // cmpxchg16b sets ZF on success
+     "setz       %3;"  // if ZF set, set cas_result to 1
+     
+     : "+m" (*dest), "+a" (dest->pSomeObj), "+d" (dest->counter), "=q" (swap_result)
+     : "b" (dest->pSomeObj), "c" (dest->counter -1)
+     : "cc", "memory"
+     );
+    return swap_result;
+}
 
 
 
@@ -32,9 +88,9 @@ class NonBlockingReadMapCAS {
     
 protected:
     
-    std::queue<StringMapHazardPointer> fHazardQueue;
+    //std::queue<StringMapHazardPointer> fHazardQueue;
    // std::atomic<StringMap*> fHazard[MAX_THREADS*8];
-    std::atomic<StringMapHazardPointer*> fReadMapReference;
+
 
     
 public:
@@ -42,45 +98,46 @@ public:
     class StringMapHazardPointer {
         
     public:
-        std::atomic<StringMap*> fStringMap;
-        std::atomic<uint64_t> fCounter;
+        StringMap* fStringMap;
+        uint64_t fCounter;
         
-        StringMap* getMap() {
-            return fStringMap.load();
-        }
         
-        bool CompareAndSwap(StringMap* oldMap, uint64_t oldCounter, StringMap* newMap, uint64_t newCounter)
+        bool AtmoicCopyAndIncrement(StringMapHazardPointer *copyFrom)
         {
-            bool cas_result;
+            bool swap_result;
             __asm__ __volatile__
             (
              "lock cmpxchg16b %0;"  // cmpxchg16b sets ZF on success
              "setz       %3;"  // if ZF set, set cas_result to 1
              
-             : "+m" (*this), "+a" (oldMap), "+d" (oldCounter), "=q" (cas_result)
-             : "b" (newMap), "c" (newCounter)
+             : "+m" (*this), "+a" (this->fStringMap), "+d" (this->fCounter), "=q" (swap_result)
+             : "b" (copyFrom->fStringMap), "c" (copyFrom->fCounter +1)
              : "cc", "memory"
              );
-            return cas_result;
+            return swap_result;
         }
     };
-    
-    
     __attribute__((aligned(16)));
     
-    NonBlockingReadMapCAS() {
-        fReadMapReference.store(new StringMapHazardPointer());
+
+    std::atomic<StringMapHazardPointer*> fReadMapReference;
+    
+    NonBlockingReadMapCAS()  {
+        fReadMapReference = new StringMapHazardPointer();
 
     }
     
     ~NonBlockingReadMapCAS() {
-        delete fReadMapReference.load();
+
     }
     
     std::string get(std::string &key) {
-        StringMapHazardPointer *map =  fReadMapReference.load();
-        fHazard[threadId*8].store(map, std::memory_order_seq_cst);
-        std::string value = map->fStringMap.load()->at(key);
+        StringMapHazardPointer *map = new StringMapHazardPointer;
+        //populate our counted pointer with the current state of fReadReference and counter +1.
+        while (map->AtmoicCopyAndIncrement(fReadMapReference)) {
+            
+        }
+        std::string value = map->fStringMap->at(key);
         return value;
     }
     
