@@ -27,10 +27,10 @@ protected:
     std::atomic<int> fReferenceCount;
     
 public:
+
+    ReferenceCountedStringMap() : fReferenceCount(0), fUnderlyingMap(new StringMap) {}
     
-    ReferenceCountedStringMap(StringMap &map) : fReferenceCount(0) {
-        fUnderlyingMap = new StringMap(map);
-    }
+    ReferenceCountedStringMap(StringMap &map) : fReferenceCount(0), fUnderlyingMap(new StringMap(map)) {}
     
     
     ~ReferenceCountedStringMap() {
@@ -121,7 +121,7 @@ public:
     void clear() {
         pthread_mutex_lock(&fMutex);
         ReferenceCountedStringMap *pCurrentReadMap = fReadMapReference.load();
-        ReferenceCountedStringMap* pNewMap = new ReferenceCountedStringMap(*pCurrentReadMap->getMap());
+        ReferenceCountedStringMap* pNewMap = new ReferenceCountedStringMap();
         fReadMapReference.store(pNewMap);
         //wait until reference count has gone to zero.
         //todo:  give up after a while in case something went awry.
