@@ -28,7 +28,7 @@ public:
         StringMap* fStringMap;
         std::atomic<uint64_t> fCounter;
         
-        //StringMapHazardPointer(StringMapHazardPointer* copy) : fStringMap(copy->fStringMap), fCounter(0) { }
+        OctaWordMapWrapper(OctaWordMapWrapper* copy) : fStringMap(new StringMap(*copy->fStringMap)), fCounter(0) { }
         
         OctaWordMapWrapper() : fStringMap(new StringMap), fCounter(0) { }
         
@@ -85,7 +85,9 @@ public:
     };
     __attribute__((aligned(16)));
 
-    OctaWordMapWrapper* fReadMapReference;
+    std::atomic<OctaWordMapWrapper*> fReadMapReference;
+    pthread_mutex_t fMutex;
+
     
     NonBlockingReadMapCAS()  {
         fReadMapReference = new OctaWordMapWrapper();
@@ -101,7 +103,7 @@ public:
     }
     
     bool contains(std::string &key) {
-        OctaWordMapWrapper *map = fReadMapReference->atomicIncrementAndGetPointer();
+        OctaWordMapWrapper *map = fReadMapReference.load()->atomicIncrementAndGetPointer();
         bool result = map->fStringMap->count(key) != 0;
         map->fCounter--;
         return result;
@@ -113,9 +115,10 @@ public:
     }
     
     std::string get(std::string &key) {
-        OctaWordMapWrapper *map = fReadMapReference->atomicIncrementAndGetPointer();
+        OctaWordMapWrapper *map = fReadMapReference.load()->atomicIncrementAndGetPointer();
         std::string value = map->fStringMap->at(key);
         map->fCounter--;
+        //map->atomicDecrement();
         return value;
     }
     
@@ -126,6 +129,18 @@ public:
     }
     
     void put(std::string &key, std::string &value) {
+        pthread_mutex_lock(&fMutex);
+        OctaWordMapWrapper *oldWrapper = fReadMapReference;
+        OctaWordMapWrapper *newWrapper = new OctaWordMapWrapper(oldWrapper);
+        std::pair<std::string, std::string> kvPair(key, value);
+        newWrapper->fStringMap->insert(kvPair);
+        fReadMapReference.store(newWrapper);
+        
+        while (oldWrapper->fCounter > 0);
+        delete oldWrapper;
+        pthread_mutex_unlock(&fMutex);
+
+        /*
         StringMap *pOldMap = fReadMapReference->fStringMap;
         StringMap *pNewMap = 0;
         do {
@@ -135,16 +150,18 @@ public:
             pNewMap->insert(kvPair);
         } while (!fReadMapReference->atomicSwapWhenNotReferenced(pNewMap));
         delete pOldMap;
+         */
     }
     
     void clear() {
-        StringMap *pOldMap = fReadMapReference->fStringMap;
-        StringMap *pNewMap;
-        do {
-            if (pNewMap) delete pNewMap;
-            pNewMap = new StringMap(*fReadMapReference->fStringMap);
-        } while (!fReadMapReference->atomicSwapWhenNotReferenced(pNewMap));
-        delete pOldMap;
+        pthread_mutex_lock(&fMutex);
+        OctaWordMapWrapper *oldWrapper = fReadMapReference;
+        OctaWordMapWrapper *newWrapper = new OctaWordMapWrapper(oldWrapper);
+        fReadMapReference.store(newWrapper);
+        while (oldWrapper->fCounter > 0);
+        delete oldWrapper;
+        pthread_mutex_unlock(&fMutex);
+
     }
     
 };

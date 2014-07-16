@@ -45,10 +45,61 @@ void assignAndIncrement(MyObj **dest, MyObj **src ) {
     //end atomic
 }
 
+void * reader(void * ptr) {
+    const int NUM_READS = 100;
+    NonBlockingReadMap *map = (NonBlockingReadMap*) ptr;
+    
+    for (int i = 0; i < NUM_READS; i++) {
+        map->get("lala3");
+        map->get("lala2");
+    }
+    return 0;
+}
+
+void * writer(void * ptr) {
+    const int NUM_WRITES = 100;
+    
+    NonBlockingReadMap *map = (NonBlockingReadMap*) ptr;
+    
+    for (int i = 0; i < NUM_WRITES; i++) {
+        std::stringstream out;
+        out << "AVeryLongKeyString" << i;
+        std::string key = out.str();
+        std::string value("somevalue");
+        map->put(key, value);
+    }
+    return 0;
+}
+
+
 
 
 int main()
 {
+    NonBlockingReadMapCAS nbrmap;
+    
+    std::string key("lala");
+    std::string value("xyz");
+    
+    nbrmap.put(key, value);
+    nbrmap.put("lala2", "xyz2");
+    nbrmap.put("lala3", "xyz3");
+    
+    const int NUM_THREADS = 1000;
+    pthread_t threads[NUM_THREADS];
+    pthread_t writerThread;
+    pthread_create(&writerThread, NULL, writer, &nbrmap);
+    for (int i = 0; i < NUM_THREADS; i++) {
+        pthread_create(&threads[i], NULL, reader, &nbrmap);
+    }
+    
+    for (int i = 0; i < NUM_THREADS; i++) {
+        pthread_join(threads[i], NULL);
+    }
+    pthread_join(writerThread, NULL);
+    
+    
+    
     MyObj * src = new MyObj;
     src->c = "asdf";
     src->i = 0;
