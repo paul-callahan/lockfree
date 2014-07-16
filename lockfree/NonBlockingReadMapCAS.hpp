@@ -24,11 +24,11 @@ typedef std::unordered_map<std::string, std::string> StringMap;
  *
  */
 
-
+/*
 struct MyThing {
     std::atomic<void *> pSomeObj;
     std::atomic<uint64_t> counter;
-    __attribute__((aligned(16)));
+    //__attribute__((aligned(16)));
 };
 
 bool AtomicCopyAndIncrement(MyThing **dest, MyThing *src) {
@@ -46,11 +46,12 @@ void blarg() {
     
     AtomicCopyAndIncrement(&dest, src);
     
-    std::atomic<MyThing*> asrc;
-    std::atomic<MyThing*> adest;
+    //std::atomic<MyThing*> asrc;
+    //std::atomic<MyThing*> adest;
     
     
 }
+
 
 bool AtmoicCopyAndIncrement(MyThing *dest, MyThing *src)
 {
@@ -82,15 +83,12 @@ bool AtmoicDecrement(MyThing *dest)
     return swap_result;
 }
 
+*/
+static const int zero = 0;  //provides an l-value for asm code
+
 
 
 class NonBlockingReadMapCAS {
-    
-protected:
-    
-    //std::queue<StringMapHazardPointer> fHazardQueue;
-   // std::atomic<StringMap*> fHazard[MAX_THREADS*8];
-
 
     
 public:
@@ -99,8 +97,33 @@ public:
         
     public:
         StringMap* fStringMap;
-        uint64_t fCounter;
+        std::atomic<uint64_t> fCounter;
         
+        StringMapHazardPointer(StringMapHazardPointer* copy) : fStringMap(copy->fStringMap), fCounter(0) { }
+        
+        StringMapHazardPointer() : fStringMap(new StringMap), fCounter(0) { }
+        
+        ~StringMapHazardPointer() {
+            delete fStringMap;
+        }
+        
+        static bool doubleCAS(StringMapHazardPointer* target, StringMap* compareMap, uint64_t compareCounter, StringMap* swapMap, uint64_t swapCounter ) {
+            bool cas_result;
+            __asm__ __volatile__
+            (
+             "lock cmpxchg16b %0;"  // cmpxchg16b sets ZF on success
+             "setz       %3;"  // if ZF set, set cas_result to 1
+             
+             : "+m" (*target),
+             "+a" (compareMap),  //compare stringmap pointer
+             "+d" (compareCounter),    //compare counter
+             "=q" (cas_result)        //results
+             : "b"  (swapMap),  //replace stringmap pointer with
+             "c"  (swapCounter)  //replace counter with
+             : "cc", "memory"
+             );
+            return cas_result;
+        }
         
         bool AtmoicCopyAndIncrement(StringMapHazardPointer *copyFrom)
         {
@@ -116,11 +139,75 @@ public:
              );
             return swap_result;
         }
+        
+        StringMapHazardPointer* atomicIncrementAndGetPointer()
+        {
+            bool swap_result = false;
+            doubleCAS(this, this->fStringMap, this->fCounter, this->fStringMap, this->fCounter +1);
+            while (!swap_result) {
+                __asm__ __volatile__
+                (
+                 "lock cmpxchg16b %0;"  // cmpxchg16b sets ZF on success
+                 "setz       %3;"  // if ZF set, set cas_result to 1
+                 
+                 : "+m" (*this),
+                   "+a" (this->fStringMap),  //compare stringmap pointer
+                   "+d" (this->fCounter),    //compare counter
+                   "=q" (swap_result)        //results
+                 : "b"  (this->fStringMap),  //replace stringmap pointer with
+                   "c"  (this->fCounter +1)  //replace counter with
+                 : "cc", "memory"
+                 );
+            }
+            return this;
+        }
+        
+        StringMapHazardPointer* atomicDecrement()
+        {
+            bool swap_result = false;
+            while (!swap_result) {
+                __asm__ __volatile__
+                (
+                 "lock cmpxchg16b %0;"  // cmpxchg16b sets ZF on success
+                 "setz       %3;"  // if ZF set, set cas_result to 1
+                 
+                 : "+m" (*this),
+                 "+a" (this->fStringMap),  //compare stringmap pointer
+                 "+d" (this->fCounter),    //compare counter
+                 "=q" (swap_result)        //results
+                 : "b"  (this->fStringMap),  //replace stringmap pointer with
+                 "c"  (this->fCounter +1)  //replace counter with
+                 : "cc", "memory"
+                 );
+            }
+            return this;
+        }
+        
+        void atomicCopyWhenNotReferenced(StringMap* newMap)
+        {
+            bool swap_result = false;
+            while (!swap_result) {
+                __asm__ __volatile__
+                (
+                 "lock cmpxchg16b %0;"  // cmpxchg16b sets ZF on success
+                 "setz       %3;"  // if ZF set, set cas_result to 1
+                 
+                 : "+m" (*this),
+                   "+a" (this->fStringMap),      //compare stringmap pointer
+                   "+d" (zero),                  //compare counter
+                   "=q" (swap_result)            //results
+                 : "b"  (newMap),                //replace stringmap pointer with
+                   "c"  (0)                      //replace counter with
+                 : "cc", "memory"
+                 );
+            }
+        }
     };
-    __attribute__((aligned(16)));
     
 
-    std::atomic<StringMapHazardPointer*> fReadMapReference;
+__attribute__((aligned(16)));
+
+    StringMapHazardPointer* fReadMapReference;
     
     NonBlockingReadMapCAS()  {
         fReadMapReference = new StringMapHazardPointer();
@@ -132,21 +219,19 @@ public:
     }
     
     std::string get(std::string &key) {
-        StringMapHazardPointer *map = new StringMapHazardPointer;
-        //populate our counted pointer with the current state of fReadReference and counter +1.
-        while (map->AtmoicCopyAndIncrement(fReadMapReference)) {
-            
-        }
+        StringMapHazardPointer *map = fReadMapReference->atomicIncrementAndGetPointer();
         std::string value = map->fStringMap->at(key);
+        map->fCounter--;
         return value;
     }
     
     void put(std::string &key, std::string &value) {
-        StringMapHazardPointer *pCurrentReadMap = fReadMapReference.load();
-        std::unique_ptr<StringMapHazardPointer> upMapCopy(new ReferenceCountedStringMap(*pCurrentReadMap));
+        StringMapHazardPointer *pCurrentReadMap = fReadMapReference;
+        StringMapHazardPointer *pNewMap = new StringMapHazardPointer(pCurrentReadMap);
+
         std::pair<std::string, std::string> kvPair(key, value);
-        upMapCopy->insert(kvPair);
-        fReadMapReference.store(upMapCopy.release());
+        pNewMap->fStringMap->insert(kvPair);
+        fReadMapReference
         delete pCurrentReadMap;
     }
     

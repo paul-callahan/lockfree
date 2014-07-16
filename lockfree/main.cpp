@@ -20,8 +20,8 @@
 //#include "Hazard.h"
 
 
-//#include "NonBlockingReadMapCAS.hpp"
-#include "NonBlockingReadMapRefCount.hpp"
+#include "NonBlockingReadMapCAS.hpp"
+//#include "NonBlockingReadMapRefCount.hpp"
 
 //#include "NonBlockingReadMapCAS.hpp"
 
@@ -38,12 +38,14 @@ struct MyObj {
     int i;
 };
 
-void assignAndIncrement(MyObj *dest, MyObj *src ) {
+void assignAndIncrement(MyObj **dest, MyObj **src ) {
     //begin atomic
-    dest = src;
-    src->i++;
+    *dest = *src;
+    (*src)->i++;
     //end atomic
 }
+
+
 
 int main()
 {
@@ -51,12 +53,14 @@ int main()
     src->c = "asdf";
     src->i = 0;
     
-    MyObj *dest;
+    MyObj *dest = new MyObj;
+    dest->c = "lala";
+    dest->i = 10;
     
-    assignAndIncrement(dest, src);
+    assignAndIncrement(&dest, &src);
     
-    std::cout << dest->c << " " << dest->i ;
-    
+    std::cout << dest->c << " " << dest->i << " " << dest << "\n";
+    std::cout << src->c << " " << src->i  << " " << src << (src == dest) << "\n";
     
     //std::string key("lala");
     //std::string value("xyz");
