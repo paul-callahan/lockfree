@@ -62,6 +62,17 @@ int main()
     std::cout << dest->c << " " << dest->i << " " << dest << "\n";
     std::cout << src->c << " " << src->i  << " " << src << (src == dest) << "\n";
     
+    
+    NonBlockingReadMapCAS map;
+    
+    map.put("xyz", "123");
+    
+    std::cout << map.get("xyz") << "\n";
+    
+    map.put("xyz2", "1232");
+    
+    
+    
     //std::string key("lala");
     //std::string value("xyz");
 /*

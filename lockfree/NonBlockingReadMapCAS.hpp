@@ -2,7 +2,7 @@
 //  NonBlockingReadMapCAS.hpp
 //  lockfree
 //
-//  Created by Paul Callahan on 7/9/14.
+//  Created by Paul Callahan on 7/15/14.
 //  Copyright (c) 2014 Paul Callahan. All rights reserved.
 //
 
@@ -14,235 +14,139 @@
 #include <pthread.h>
 #include <queue>
 
-#define MAX_THREADS = 100;
 
 typedef std::unordered_map<std::string, std::string> StringMap;
 
-/**
- * Wraps and delegates to a StringMap (std::unordered_map<std::string, std::string>) and
- * adds reference counting.
- *
- */
-
-/*
-struct MyThing {
-    std::atomic<void *> pSomeObj;
-    std::atomic<uint64_t> counter;
-    //__attribute__((aligned(16)));
-};
-
-bool AtomicCopyAndIncrement(MyThing **dest, MyThing *src) {
-    //begin atomic
-    dest = &src;
-    src->counter++;
-    //end atomic
-    return true;
-}
-
-void blarg() {
-    
-    MyThing* src;
-    MyThing* dest;
-    
-    AtomicCopyAndIncrement(&dest, src);
-    
-    //std::atomic<MyThing*> asrc;
-    //std::atomic<MyThing*> adest;
-    
-    
-}
-
-
-bool AtmoicCopyAndIncrement(MyThing *dest, MyThing *src)
-{
-    bool swap_result;
-    __asm__ __volatile__
-    (
-     "lock cmpxchg16b %0;"  // cmpxchg16b sets ZF on success
-     "setz       %3;"  // if ZF set, set cas_result to 1
-     
-     : "+m" (*dest), "+a" (dest->pSomeObj), "+d" (dest->counter), "=q" (swap_result)
-     : "b" (src->pSomeObj), "c" (src->counter +1)
-     : "cc", "memory"
-     );
-    return swap_result;
-}
-
-bool AtmoicDecrement(MyThing *dest)
-{
-    bool swap_result;
-    __asm__ __volatile__
-    (
-     "lock cmpxchg16b %0;"  // cmpxchg16b sets ZF on success
-     "setz       %3;"  // if ZF set, set cas_result to 1
-     
-     : "+m" (*dest), "+a" (dest->pSomeObj), "+d" (dest->counter), "=q" (swap_result)
-     : "b" (dest->pSomeObj), "c" (dest->counter -1)
-     : "cc", "memory"
-     );
-    return swap_result;
-}
-
-*/
 static const int zero = 0;  //provides an l-value for asm code
-
-
 
 class NonBlockingReadMapCAS {
 
-    
 public:
     
-    class StringMapHazardPointer {
-        
+    class OctaWordMapWrapper {
     public:
         StringMap* fStringMap;
         std::atomic<uint64_t> fCounter;
         
-        StringMapHazardPointer(StringMapHazardPointer* copy) : fStringMap(copy->fStringMap), fCounter(0) { }
+        //StringMapHazardPointer(StringMapHazardPointer* copy) : fStringMap(copy->fStringMap), fCounter(0) { }
         
-        StringMapHazardPointer() : fStringMap(new StringMap), fCounter(0) { }
+        OctaWordMapWrapper() : fStringMap(new StringMap), fCounter(0) { }
         
-        ~StringMapHazardPointer() {
+        ~OctaWordMapWrapper() {
             delete fStringMap;
         }
         
-        static bool doubleCAS(StringMapHazardPointer* target, StringMap* compareMap, uint64_t compareCounter, StringMap* swapMap, uint64_t swapCounter ) {
+        /**
+         * Does a compare and swap on an octa-word - in this case, our two adjacent class members fStringMap 
+         * pointer and fCounter.
+         */
+        static bool inline doubleCAS(OctaWordMapWrapper* target, StringMap* compareMap, uint64_t compareCounter, StringMap* swapMap, uint64_t swapCounter ) {
             bool cas_result;
             __asm__ __volatile__
             (
-             "lock cmpxchg16b %0;"  // cmpxchg16b sets ZF on success
-             "setz       %3;"  // if ZF set, set cas_result to 1
+             "lock cmpxchg16b %0;"    // cmpxchg16b sets ZF on success
+             "setz       %3;"         // if ZF set, set cas_result to 1
              
              : "+m" (*target),
-             "+a" (compareMap),  //compare stringmap pointer
-             "+d" (compareCounter),    //compare counter
-             "=q" (cas_result)        //results
-             : "b"  (swapMap),  //replace stringmap pointer with
-             "c"  (swapCounter)  //replace counter with
+               "+a" (compareMap),     //compare target's stringmap pointer to compareMap
+               "+d" (compareCounter), //compare target's counter to compareCounter
+               "=q" (cas_result)      //results
+             : "b"  (swapMap),        //swap target's stringmap pointer with swapMap
+               "c"  (swapCounter)     //swap target's counter with swapCounter
              : "cc", "memory"
              );
             return cas_result;
         }
         
-        bool AtmoicCopyAndIncrement(StringMapHazardPointer *copyFrom)
-        {
-            bool swap_result;
-            __asm__ __volatile__
-            (
-             "lock cmpxchg16b %0;"  // cmpxchg16b sets ZF on success
-             "setz       %3;"  // if ZF set, set cas_result to 1
-             
-             : "+m" (*this), "+a" (this->fStringMap), "+d" (this->fCounter), "=q" (swap_result)
-             : "b" (copyFrom->fStringMap), "c" (copyFrom->fCounter +1)
-             : "cc", "memory"
-             );
-            return swap_result;
-        }
+
         
-        StringMapHazardPointer* atomicIncrementAndGetPointer()
+        OctaWordMapWrapper* atomicIncrementAndGetPointer()
         {
-            bool swap_result = false;
-            doubleCAS(this, this->fStringMap, this->fCounter, this->fStringMap, this->fCounter +1);
-            while (!swap_result) {
-                __asm__ __volatile__
-                (
-                 "lock cmpxchg16b %0;"  // cmpxchg16b sets ZF on success
-                 "setz       %3;"  // if ZF set, set cas_result to 1
-                 
-                 : "+m" (*this),
-                   "+a" (this->fStringMap),  //compare stringmap pointer
-                   "+d" (this->fCounter),    //compare counter
-                   "=q" (swap_result)        //results
-                 : "b"  (this->fStringMap),  //replace stringmap pointer with
-                   "c"  (this->fCounter +1)  //replace counter with
-                 : "cc", "memory"
-                 );
+            while(true) {
+                if (doubleCAS(this, this->fStringMap, this->fCounter, this->fStringMap, this->fCounter +1))
+                    break;
             }
             return this;
         }
         
-        StringMapHazardPointer* atomicDecrement()
+        OctaWordMapWrapper* atomicDecrement()
         {
-            bool swap_result = false;
-            while (!swap_result) {
-                __asm__ __volatile__
-                (
-                 "lock cmpxchg16b %0;"  // cmpxchg16b sets ZF on success
-                 "setz       %3;"  // if ZF set, set cas_result to 1
-                 
-                 : "+m" (*this),
-                 "+a" (this->fStringMap),  //compare stringmap pointer
-                 "+d" (this->fCounter),    //compare counter
-                 "=q" (swap_result)        //results
-                 : "b"  (this->fStringMap),  //replace stringmap pointer with
-                 "c"  (this->fCounter +1)  //replace counter with
-                 : "cc", "memory"
-                 );
+            while(true) {
+                if (doubleCAS(this, this->fStringMap, this->fCounter, this->fStringMap, this->fCounter -1))
+                    break;
             }
             return this;
         }
         
-        void atomicCopyWhenNotReferenced(StringMap* newMap)
+        bool atomicSwapWhenNotReferenced(StringMap* newMap)
         {
-            bool swap_result = false;
-            while (!swap_result) {
-                __asm__ __volatile__
-                (
-                 "lock cmpxchg16b %0;"  // cmpxchg16b sets ZF on success
-                 "setz       %3;"  // if ZF set, set cas_result to 1
-                 
-                 : "+m" (*this),
-                   "+a" (this->fStringMap),      //compare stringmap pointer
-                   "+d" (zero),                  //compare counter
-                   "=q" (swap_result)            //results
-                 : "b"  (newMap),                //replace stringmap pointer with
-                   "c"  (0)                      //replace counter with
-                 : "cc", "memory"
-                 );
-            }
+            return doubleCAS(this, this->fStringMap, zero, newMap, 0);
         }
     };
-    
+    __attribute__((aligned(16)));
 
-__attribute__((aligned(16)));
-
-    StringMapHazardPointer* fReadMapReference;
+    OctaWordMapWrapper* fReadMapReference;
     
     NonBlockingReadMapCAS()  {
-        fReadMapReference = new StringMapHazardPointer();
-
+        fReadMapReference = new OctaWordMapWrapper();
     }
     
     ~NonBlockingReadMapCAS() {
 
     }
     
+    bool contains(const char* key) {
+        std::string keyStr(key);
+        return contains(keyStr);
+    }
+    
+    bool contains(std::string &key) {
+        OctaWordMapWrapper *map = fReadMapReference->atomicIncrementAndGetPointer();
+        bool result = map->fStringMap->count(key) != 0;
+        map->fCounter--;
+        return result;
+    }
+    
+    std::string get(const char* key) {
+        std::string keyStr(key);
+        return get(keyStr);
+    }
+    
     std::string get(std::string &key) {
-        StringMapHazardPointer *map = fReadMapReference->atomicIncrementAndGetPointer();
+        OctaWordMapWrapper *map = fReadMapReference->atomicIncrementAndGetPointer();
         std::string value = map->fStringMap->at(key);
         map->fCounter--;
         return value;
     }
     
+    void put(const char* key, const char* value) {
+        std::string keyStr(key);
+        std::string valueStr(value);
+        put(keyStr, valueStr);
+    }
+    
     void put(std::string &key, std::string &value) {
-        StringMapHazardPointer *pCurrentReadMap = fReadMapReference;
-        StringMapHazardPointer *pNewMap = new StringMapHazardPointer(pCurrentReadMap);
-
-        std::pair<std::string, std::string> kvPair(key, value);
-        pNewMap->fStringMap->insert(kvPair);
-        fReadMapReference
-        delete pCurrentReadMap;
+        StringMap *pOldMap = fReadMapReference->fStringMap;
+        StringMap *pNewMap = 0;
+        do {
+            if (pNewMap) delete pNewMap;
+            pNewMap = new StringMap(*pOldMap);
+            std::pair<std::string, std::string> kvPair(key, value);
+            pNewMap->insert(kvPair);
+        } while (!fReadMapReference->atomicSwapWhenNotReferenced(pNewMap));
+        delete pOldMap;
     }
     
     void clear() {
-        ReferenceCountedStringMap *pCurrentReadMap = fReadMapReference.load();
-        std::unique_ptr<StringMapHazardPointer> upMapCopy(new StringMapHazardPointer());
-        fReadMapReference.store(upMapCopy.release());
-        pCurrentReadMap->clear();
-        while(pCurrentReadMap->getReferenceCount() > 0);
-        delete pCurrentReadMap;
+        StringMap *pOldMap = fReadMapReference->fStringMap;
+        StringMap *pNewMap;
+        do {
+            if (pNewMap) delete pNewMap;
+            pNewMap = new StringMap(*fReadMapReference->fStringMap);
+        } while (!fReadMapReference->atomicSwapWhenNotReferenced(pNewMap));
+        delete pOldMap;
     }
     
 };
 
+typedef NonBlockingReadMapCAS NonBlockingReadMap;
